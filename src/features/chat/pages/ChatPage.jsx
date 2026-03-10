@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-import { ArrowLeft, Send, Mic, MicOff, Volume2, MessageCircle, Sprout, Settings, Bell } from 'lucide-react';
+import { ArrowLeft, Send, Mic, MicOff, Volume2, MessageCircle, Sprout, Settings, Bell, StopCircle } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useLanguage } from '@/shared/contexts/LanguageContext';
 import { LanguageSelector } from '@/shared/ui/LanguageSelector';
@@ -27,9 +27,11 @@ const ChatPage = () => {
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [voiceMode, setVoiceMode] = useState(false);
+  const [isSpeaking, setIsSpeaking] = useState(false);
 
   const messagesEndRef = useRef(null);
   const inputRef = useRef(null);
+  const lastSendWasVoiceRef = useRef(false);
 
   // Use the voice agent hook
   const {
@@ -37,16 +39,50 @@ const ChatPage = () => {
     isSupported,
     startListening,
     stopListening,
-    speak,
     setProcessing
   } = useVoiceAgent({
+    onInterimTranscript: (transcript) => {
+      // Live preview while speaking
+      if (transcript) setInput(transcript);
+    },
     onTranscript: (transcript, confidence) => {
-      console.log('Received transcript:', transcript, 'Confidence:', confidence);
-      setInput(transcript);
-      
-      // In voice mode, automatically send after receiving transcript
-      if (voiceMode) {
-        handleSend(transcript);
+      const raw = (transcript || '').trim();
+      if (!raw) return;
+
+      console.log('Received transcript:', raw, 'Confidence:', confidence);
+      setInput(raw);
+
+      const normalized = raw.toLowerCase();
+      const stopWords = [
+        'wait', 'stop', 'pause', 'ruko', 'bas',
+        'ఆగు', 'ఆపు',
+        'रुको', 'बस', 'एक मिनट',
+        'ఒక్క నిమిషం'
+      ];
+
+      const isStopCommand = stopWords.some(w => normalized.includes(w));
+
+      // Hands-free barge-in: while AI is speaking, user speech interrupts.
+      if (voiceMode && (isSpeaking || voiceState.currentState === 'speaking')) {
+        window.speechSynthesis?.cancel();
+        setIsSpeaking(false);
+
+        if (isStopCommand) {
+          toast.success('Paused. Listening...', { duration: 1500 });
+          return;
+        }
+
+        if ((typeof confidence !== 'number' || confidence > 0.6) && normalized.length > 2) {
+          lastSendWasVoiceRef.current = true;
+          setTimeout(() => handleSend(raw), 50);
+        }
+        return;
+      }
+
+      // Normal flow: auto-submit after final transcript (one-shot + voice mode)
+      if (!isStopCommand) {
+        lastSendWasVoiceRef.current = true;
+        setTimeout(() => handleSend(raw), 150);
       }
     },
     onError: (error) => {
@@ -75,11 +111,44 @@ const ChatPage = () => {
     autoStart: false
   });
 
+  const getCurrentTtsLang = () => {
+    switch (currentLanguage) {
+      case 'hi':
+        return 'hi-IN';
+      case 'te':
+        return 'te-IN';
+      case 'en':
+      default:
+        return 'en-IN';
+    }
+  };
+
+  const handleGeminiResponse = (responseText) => {
+    const text = (responseText || '').trim();
+    if (!text) return;
+
+    // Cancel any ongoing speech before speaking new response
+    window.speechSynthesis?.cancel();
+    setIsSpeaking(true);
+
+    const utterance = new SpeechSynthesisUtterance(text);
+    utterance.lang = getCurrentTtsLang();
+
+    utterance.onend = () => setIsSpeaking(false);
+    utterance.onerror = () => setIsSpeaking(false);
+
+    window.speechSynthesis?.speak(utterance);
+  };
+
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
   const handleSend = async (text) => {
+    // BUGFIX: Always cancel any ongoing speech first, unconditionally.
+    window.speechSynthesis?.cancel();
+    setIsSpeaking(false);
+
     const messageText = text || input.trim();
     if (!messageText || isLoading) return;
 
@@ -114,13 +183,9 @@ const ChatPage = () => {
 
       setMessages((prev) => [...prev, botMessage]);
 
-      // In voice mode, automatically speak the response
-      if (voiceMode) {
-        await speak(response.message, {
-          rate: 0.95,
-          pitch: 1.0,
-          volume: 1.0
-        });
+      // Speak response for voice-triggered sends (and always in hands-free voice mode)
+      if (voiceMode || lastSendWasVoiceRef.current) {
+        handleGeminiResponse(response.message);
       }
     } catch (error) {
       console.error('Chat error:', error);
@@ -136,14 +201,15 @@ const ChatPage = () => {
       
       setMessages((prev) => [...prev, errorMessage]);
       
-      if (voiceMode) {
-        await speak(errorMessage.content);
+      if (voiceMode || lastSendWasVoiceRef.current) {
+        handleGeminiResponse(errorMessage.content);
       } else {
         toast.error(error.message.includes('API key') ? 'API key not configured' : 'Failed to get response');
       }
     } finally {
       setIsLoading(false);
       setProcessing(false);
+      lastSendWasVoiceRef.current = false;
     }
   };
 
@@ -162,7 +228,13 @@ const ChatPage = () => {
     if (newVoiceMode) {
       // Test microphone access first
       try {
-        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        const stream = await navigator.mediaDevices.getUserMedia({ 
+          audio: {
+            echoCancellation: true,
+            noiseSuppression: true,
+            autoGainControl: true
+          }
+        });
         
         // Check if audio is actually being captured
         const audioContext = new (window.AudioContext || window.webkitAudioContext)();
@@ -181,7 +253,7 @@ const ChatPage = () => {
         
         // Start listening after a brief delay
         setTimeout(() => {
-          startListening();
+          startListening({ autoRestart: true, handsFreeMode: true });
         }, 500);
         
       } catch (error) {
@@ -220,8 +292,28 @@ const ChatPage = () => {
       stopListening();
     } else {
       // Start one-time listening
-      startListening();
-      toast.success('Listening... Speak now');
+      navigator.mediaDevices.getUserMedia({ 
+        audio: {
+          echoCancellation: true,
+          noiseSuppression: true,
+          autoGainControl: true
+        }
+      })
+        .then((stream) => {
+          stream.getTracks().forEach(track => track.stop());
+          startListening({ autoRestart: false, handsFreeMode: false });
+          toast.success('Listening... Speak now');
+        })
+        .catch((error) => {
+          console.error('Microphone access error:', error);
+          if (error.name === 'NotAllowedError' || error.name === 'PermissionDeniedError') {
+            toast.error('Microphone permission denied. Please allow microphone access and try again.');
+          } else if (error.name === 'NotFoundError') {
+            toast.error('No microphone found. Please connect a microphone and try again.');
+          } else {
+            toast.error('Failed to access microphone. Please check your settings.');
+          }
+        });
     }
   };
 
@@ -232,11 +324,7 @@ const ChatPage = () => {
     }
 
     try {
-      await speak(text, {
-        rate: 0.9,
-        pitch: 1.0,
-        volume: 1.0
-      });
+      handleGeminiResponse(text);
       toast.success('Playing audio...');
     } catch (error) {
       console.error('Speech error:', error);
@@ -244,7 +332,13 @@ const ChatPage = () => {
     }
   };
 
-  const { isListening, isProcessing, isSpeaking, currentState } = voiceState;
+  const { isListening, isProcessing, isSpeaking: voiceAgentIsSpeaking, currentState } = voiceState;
+  const showStop = isSpeaking || voiceAgentIsSpeaking;
+
+  const stopSpeech = () => {
+    window.speechSynthesis?.cancel();
+    setIsSpeaking(false);
+  };
 
   return (
     <div className="h-[100dvh] w-screen flex flex-col overflow-hidden bg-[#fdfbf7] text-[#2a3328]">
@@ -360,18 +454,20 @@ const ChatPage = () => {
         <div className="p-4 sm:p-6 bg-transparent">
           <div className="bg-white border border-[#eeede6] rounded-[2.5rem] p-2 flex items-center gap-2 shadow-xl shadow-black/5">
             <button
-              onClick={toggleVoiceInput}
-              onDoubleClick={toggleVoiceMode}
+              onClick={showStop ? stopSpeech : toggleVoiceInput}
+              onDoubleClick={showStop ? undefined : toggleVoiceMode}
               className={`w-12 h-12 rounded-full flex items-center justify-center transition-all flex-shrink-0 relative ${
                 voiceMode
                   ? 'bg-gradient-to-br from-[#768870] to-[#5a6b54] text-white shadow-lg'
                   : isListening
                   ? 'bg-red-500 text-white animate-pulse'
+                  : showStop
+                  ? 'bg-red-600 text-white'
                   : 'bg-[#f4f2eb] text-[#7a8478] hover:bg-[#eeede6]'
               }`}
-              title={voiceMode ? 'Double-click to exit voice mode' : 'Click for one-time voice input, Double-click for continuous voice mode'}
+              title={showStop ? 'Stop speaking' : voiceMode ? 'Double-click to exit voice mode' : 'Click for one-time voice input, Double-click for continuous voice mode'}
             >
-              {isListening ? <MicOff className="w-5 h-5" /> : <Mic className="w-5 h-5" />}
+              {showStop ? <StopCircle className="w-5 h-5" /> : isListening ? <MicOff className="w-5 h-5" /> : <Mic className="w-5 h-5" />}
               {voiceMode && (
                 <span className="absolute -top-1 -right-1 flex h-4 w-4">
                   <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>

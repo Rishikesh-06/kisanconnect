@@ -15,9 +15,11 @@ class VoiceAgentService {
     this.isProcessing = false;
     this.isSpeaking = false;
     this.autoRestart = true;
+    this.handsFreeMode = false;
     this.currentLanguage = 'en-IN';
     this.onStateChange = null;
     this.onTranscript = null;
+    this.onInterimTranscript = null;
     this.onError = null;
     
     // Language mappings for speech recognition
@@ -39,8 +41,8 @@ class VoiceAgentService {
     }
 
     this.recognition = new SpeechRecognition();
-    this.recognition.continuous = false; // Stop after each phrase
-    this.recognition.interimResults = false;
+    this.recognition.continuous = false; // Overridden by handsFreeMode
+    this.recognition.interimResults = true; // Live preview
     this.recognition.maxAlternatives = 1;
     this.recognition.lang = this.currentLanguage;
 
@@ -52,13 +54,37 @@ class VoiceAgentService {
     };
 
     this.recognition.onresult = (event) => {
-      const transcript = event.results[0][0].transcript;
-      const confidence = event.results[0][0].confidence;
-      
-      console.log('Transcript:', transcript, 'Confidence:', confidence);
-      
-      if (this.onTranscript) {
-        this.onTranscript(transcript, confidence);
+      let interimTranscript = '';
+      let finalTranscript = '';
+      let confidence = undefined;
+
+      for (let i = event.resultIndex; i < event.results.length; i++) {
+        const result = event.results[i];
+        const alt = result?.[0];
+        const text = alt?.transcript ?? '';
+
+        if (result.isFinal) {
+          finalTranscript += text;
+          if (typeof alt?.confidence === 'number') {
+            confidence = alt.confidence;
+          }
+        } else {
+          interimTranscript += text;
+        }
+      }
+
+      const interim = interimTranscript.trim();
+      const final = finalTranscript.trim();
+
+      if (interim && this.onInterimTranscript) {
+        this.onInterimTranscript(interim);
+      }
+
+      if (final) {
+        console.log('Transcript:', final, 'Confidence:', confidence);
+        if (this.onTranscript) {
+          this.onTranscript(final, confidence);
+        }
       }
     };
 
@@ -103,7 +129,7 @@ class VoiceAgentService {
       this.isListening = false;
       
       // Auto-restart if enabled and not processing/speaking
-      if (this.autoRestart && !this.isProcessing && !this.isSpeaking) {
+      if (this.autoRestart && !this.isProcessing && (!this.isSpeaking || this.handsFreeMode)) {
         setTimeout(() => this.startListening(), 200);
       } else {
         this.updateState('inactive');
@@ -112,12 +138,13 @@ class VoiceAgentService {
   }
 
   startListening() {
-    if (this.isListening || this.isSpeaking || !this.recognition) {
+    if (this.isListening || (!this.handsFreeMode && this.isSpeaking) || !this.recognition) {
       return;
     }
 
     try {
       this.recognition.lang = this.currentLanguage;
+      this.recognition.continuous = !!this.handsFreeMode;
       this.recognition.start();
     } catch (error) {
       console.error('Error starting recognition:', error);
@@ -133,6 +160,10 @@ class VoiceAgentService {
   }
 
   pauseListening() {
+    if (this.handsFreeMode) {
+      // In hands-free mode, keep recognition alive for barge-in.
+      return;
+    }
     if (this.recognition && this.isListening) {
       this.recognition.stop();
       this.isListening = false;
@@ -152,8 +183,10 @@ class VoiceAgentService {
         return;
       }
 
-      // Pause listening while speaking
-      this.pauseListening();
+      // In hands-free mode, keep recognition alive for barge-in.
+      if (!this.handsFreeMode) {
+        this.pauseListening();
+      }
       this.isSpeaking = true;
       this.updateState('speaking');
 
@@ -236,6 +269,16 @@ class VoiceAgentService {
 
   disableAutoRestart() {
     this.autoRestart = false;
+  }
+
+  setHandsFreeMode(enabled) {
+    this.handsFreeMode = !!enabled;
+    if (this.recognition) {
+      this.recognition.continuous = this.handsFreeMode;
+      this.recognition.interimResults = true;
+      this.recognition.maxAlternatives = 1;
+      this.recognition.lang = this.currentLanguage;
+    }
   }
 
   updateState(state) {
