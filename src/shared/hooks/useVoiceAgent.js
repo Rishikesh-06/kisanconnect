@@ -7,6 +7,7 @@ import voiceAgentService from '../services/voiceAgentService';
  */
 export const useVoiceAgent = ({ 
   onTranscript, 
+  onInterimTranscript,
   onError,
   language = 'en',
   autoStart = false 
@@ -45,6 +46,12 @@ export const useVoiceAgent = ({
         }
       };
 
+      voiceAgentService.onInterimTranscript = (transcript) => {
+        if (onInterimTranscript) {
+          onInterimTranscript(transcript);
+        }
+      };
+
       voiceAgentService.onError = (error) => {
         if (onError) {
           onError(error);
@@ -73,13 +80,19 @@ export const useVoiceAgent = ({
     voiceAgentService.setLanguage(language);
   }, [language]);
 
-  const startListening = () => {
-    voiceAgentService.enableAutoRestart();
+  const startListening = ({ autoRestart = true, handsFreeMode = false } = {}) => {
+    if (autoRestart) {
+      voiceAgentService.enableAutoRestart();
+    } else {
+      voiceAgentService.disableAutoRestart();
+    }
+    voiceAgentService.setHandsFreeMode(!!handsFreeMode);
     voiceAgentService.startListening();
   };
 
   const stopListening = () => {
     voiceAgentService.disableAutoRestart();
+    voiceAgentService.setHandsFreeMode(false);
     voiceAgentService.stopListening();
   };
 
