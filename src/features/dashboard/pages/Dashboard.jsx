@@ -46,6 +46,9 @@ const Dashboard = () => {
   // Get user's location or default
   const userLocation = userProfile?.location || 'Hyderabad, Telangana';
   const locationCity = userLocation.split(',')[0].trim();
+  
+  // Check if user needs to complete profile (for Google users who might be missing info)
+  const needsProfileCompletion = userProfile && (!userProfile.phone || !userProfile.location);
 
   useEffect(() => {
     const now = new Date();
@@ -145,6 +148,27 @@ const Dashboard = () => {
 
       {/* Main Content */}
       <main className="flex-1 flex flex-col w-full max-w-[1200px] mx-auto overflow-hidden px-4 py-3 sm:px-6 gap-3">
+        {/* Profile Completion Banner (for Google users missing info) */}
+        {needsProfileCompletion && (
+          <div className="bg-gradient-to-r from-[#768870]/10 to-[#8d9c8a]/10 border border-[#768870]/20 rounded-xl p-3 flex items-center gap-3 flex-shrink-0">
+            <div className="w-8 h-8 bg-[#768870]/20 rounded-lg flex items-center justify-center flex-shrink-0">
+              <Settings className="w-4 h-4 text-[#768870]" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-xs font-bold text-[#2a3328] mb-1">Complete Your Profile</p>
+              <p className="text-[10px] text-[#7a8478] leading-tight">
+                Add your phone number and location for personalized weather updates and local news.
+              </p>
+            </div>
+            <button
+              onClick={() => navigate('/profile')}
+              className="px-3 py-1.5 bg-[#768870] text-white rounded-lg text-[10px] font-bold hover:opacity-90 transition-opacity flex-shrink-0"
+            >
+              Complete
+            </button>
+          </div>
+        )}
+
         {/* User Identity Row */}
         <div className="flex items-center justify-between flex-shrink-0">
           <div className="min-w-0 flex-1">

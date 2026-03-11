@@ -46,20 +46,21 @@ export const signInWithGoogle = async () => {
     
     if (!userDoc.exists()) {
       // Create user document if it doesn't exist
+      // For Google users, we'll mark onboarding as completed since we have basic info
       await setDoc(doc(db, 'users', user.uid), {
         uid: user.uid,
         email: user.email,
         name: user.displayName,
         profilePicture: user.photoURL,
-        phone: null,
-        location: null,
+        phone: null, // Can be added later in profile
+        location: null, // Can be added later in profile
         farmDetails: null,
         preferences: {
-          language: 'en',
+          language: 'en', // Default to English, can be changed in settings
           notifications: true,
           voiceMode: false
         },
-        onboardingCompleted: false,
+        onboardingCompleted: true, // Skip onboarding for Google users
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp()
       });

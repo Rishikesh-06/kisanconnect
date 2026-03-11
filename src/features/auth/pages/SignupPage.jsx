@@ -24,7 +24,7 @@ import { toast } from 'sonner';
 const SignupPage = () => {
   const { t } = useTranslation();
   const navigate = useNavigate();
-  const { isAuthenticated, signUpWithPhoneNumber, verifyPhoneSignup, signInWithGoogleAuth, isLoading: authLoading } = useAuth();
+  const { isAuthenticated, signUpWithPhoneNumber, verifyPhoneSignup, signInWithGoogle, isLoading: authLoading } = useAuth();
   const { languages, currentLanguage } = useLanguage();
 
   const [step, setStep] = useState(1);
@@ -276,7 +276,7 @@ const SignupPage = () => {
     setError('');
 
     try {
-      const result = await signInWithGoogleAuth();
+      const result = await signInWithGoogle();
 
       if (result.success) {
         toast.success('Google sign-up successful!');
