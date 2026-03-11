@@ -24,11 +24,13 @@ import {
   BarChart3,
   Scan,
   CheckCircle2,
-  AlertCircle
+  AlertCircle,
+  Download
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/features/auth/contexts/AuthContext';
 import { LanguageSelector } from '@/shared/ui/LanguageSelector';
+import { InstallButton } from '@/shared/components/InstallButton';
 import BottomNav from '@/shared/components/navigation/BottomNav';
 import { toast } from 'sonner';
 import { getUserStats, getUserInsights, formatLastActivity } from '@/features/profile/services/profileService';
@@ -253,7 +255,7 @@ const ProfilePage = () => {
             </div>
 
             {/* Quick Actions Grid */}
-            <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
               {[
                 { icon: Bookmark, label: 'Saved Items' },
                 { icon: Settings, label: 'Settings' },
@@ -266,6 +268,15 @@ const ProfilePage = () => {
                   <span className="text-[10px] font-black uppercase tracking-widest text-[#2a3328]">{item.label}</span>
                 </button>
               ))}
+              
+              {/* Install App Button */}
+              <div className="kisan-card p-4 flex flex-col items-center gap-3 bg-white border-[#eeede6]">
+                <InstallButton 
+                  variant="ghost" 
+                  size="sm"
+                  className="w-full h-full flex flex-col items-center gap-3 p-0 hover:bg-transparent group"
+                />
+              </div>
             </div>
 
             {/* Real-time Statistics */}

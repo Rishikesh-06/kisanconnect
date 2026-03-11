@@ -1,4 +1,3 @@
-import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import {
@@ -19,6 +18,7 @@ import {
   ChevronRight
 } from 'lucide-react';
 import { LanguageSelector } from '@/shared/ui/LanguageSelector';
+import { InstallButton } from '@/shared/components/InstallButton';
 
 const LandingPage = () => {
   const navigate = useNavigate();
@@ -138,6 +138,11 @@ const LandingPage = () => {
                 Join Now Free
                 <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
               </button>
+              <InstallButton 
+                variant="outline" 
+                size="lg"
+                className="px-10 py-5 rounded-2xl text-base uppercase tracking-widest border-2 border-[#768870] text-[#768870] hover:bg-[#768870] hover:text-white active:scale-95 transition-all"
+              />
               <button
                 onClick={() => navigate('/login')}
                 className="kisan-card bg-transparent p-5 flex items-center justify-center gap-3 text-base font-bold border-[#eeede6] hover:bg-white active:scale-95 hover:border-[#768870]/30 transition-all"

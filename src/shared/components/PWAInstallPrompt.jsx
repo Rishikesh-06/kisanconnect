@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Button } from '../ui/button';
 import { Card, CardContent } from '../ui/card';
-import { Download, X, Smartphone, Monitor } from 'lucide-react';
+import { Download, X, Smartphone } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
 export function PWAInstallPrompt() {
@@ -45,7 +45,7 @@ export function PWAInstallPrompt() {
     // For iOS, show manual install instructions if not standalone
     if (iOS && !standalone) {
       // Delay showing prompt on iOS
-      setTimeout(() => setShowPrompt(true), 3000);
+      setTimeout(() => setShowPrompt(true), 2000);
     }
 
     return () => {
@@ -56,7 +56,7 @@ export function PWAInstallPrompt() {
 
   const handleInstallClick = async () => {
     if (deferredPrompt) {
-      // Show the install prompt
+      // Show the native browser install dialog
       deferredPrompt.prompt();
       
       // Wait for the user to respond to the prompt
@@ -80,19 +80,19 @@ export function PWAInstallPrompt() {
     localStorage.setItem('pwa-install-dismissed', Date.now().toString());
   };
 
-  // Don't show if dismissed recently (within 3 days for better conversion)
+  // Don't show if dismissed recently (within 1 day for better conversion)
   useEffect(() => {
     const dismissed = localStorage.getItem('pwa-install-dismissed');
     if (dismissed) {
       const dismissedTime = parseInt(dismissed);
-      const threeDaysAgo = Date.now() - (3 * 24 * 60 * 60 * 1000);
-      if (dismissedTime > threeDaysAgo) {
+      const oneDayAgo = Date.now() - (1 * 24 * 60 * 60 * 1000);
+      if (dismissedTime > oneDayAgo) {
         setShowPrompt(false);
       }
     }
   }, []);
 
-  // Don't show if already installed
+  // Don't show if already installed or no install prompt available
   if (isStandalone || (!showPrompt && !isIOS)) {
     return null;
   }
@@ -108,13 +108,13 @@ export function PWAInstallPrompt() {
             <h3 className="font-semibold text-sm mb-1">
               {isIOS 
                 ? t('pwa.installTitleIOS', 'Install Kisan Connect App')
-                : t('pwa.installTitle', 'Download Kisan Connect')
+                : t('pwa.installTitle', 'Install Kisan Connect')
               }
             </h3>
             <p className="text-xs text-muted-foreground mb-3">
               {isIOS 
                 ? t('pwa.installDescriptionIOS', 'Tap the Share button below, then select "Add to Home Screen" to install the app.')
-                : t('pwa.installDescription', 'Download and install our app for offline access and better performance.')
+                : t('pwa.installDescription', 'Install our app for offline access and native experience.')
               }
             </p>
             
@@ -130,7 +130,7 @@ export function PWAInstallPrompt() {
                 <Button 
                   size="sm" 
                   onClick={handleInstallClick}
-                  className="text-xs px-3 py-1 h-7 bg-primary hover:bg-primary/90"
+                  className="text-xs px-4 py-2 h-8 bg-primary hover:bg-primary/90 font-medium"
                   disabled={!deferredPrompt}
                 >
                   <Download className="w-3 h-3 mr-1" />
@@ -140,7 +140,7 @@ export function PWAInstallPrompt() {
                   variant="ghost" 
                   size="sm" 
                   onClick={handleDismiss}
-                  className="text-xs px-3 py-1 h-7"
+                  className="text-xs px-3 py-2 h-8"
                 >
                   {t('pwa.notNow', 'Not now')}
                 </Button>
@@ -153,7 +153,7 @@ export function PWAInstallPrompt() {
                   variant="ghost" 
                   size="sm" 
                   onClick={handleDismiss}
-                  className="text-xs px-3 py-1 h-7"
+                  className="text-xs px-3 py-2 h-8"
                 >
                   {t('pwa.gotIt', 'Got it')}
                 </Button>

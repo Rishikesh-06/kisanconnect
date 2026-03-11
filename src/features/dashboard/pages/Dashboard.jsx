@@ -19,6 +19,7 @@ import {
 import { useAuth } from '@/features/auth/contexts/AuthContext';
 import { useLanguage } from '@/shared/contexts/LanguageContext';
 import { LanguageSelector } from '@/shared/ui/LanguageSelector';
+import { InstallButton } from '@/shared/components/InstallButton';
 import BottomNav from '@/shared/components/navigation/BottomNav';
 import { 
   getDashboardData, 
@@ -131,6 +132,11 @@ const Dashboard = () => {
         </div>
 
         <div className="flex items-center gap-1.5 sm:gap-3 flex-shrink-0">
+          <InstallButton 
+            variant="ghost" 
+            size="sm"
+            className="p-1.5 hover:bg-[#f4f2eb] rounded-full text-[#7a8478] transition-colors flex-shrink-0 text-[10px] h-auto"
+          />
           <LanguageSelector variant="compact" />
           <button onClick={() => navigate('/news')} className="p-1.5 hover:bg-[#f4f2eb] rounded-full text-[#7a8478] transition-colors flex-shrink-0"><Bell className="w-4 h-4" /></button>
           <button onClick={() => navigate('/profile')} className="p-1.5 hover:bg-[#f4f2eb] rounded-full text-[#7a8478] transition-colors flex-shrink-0"><Settings className="w-4 h-4" /></button>
