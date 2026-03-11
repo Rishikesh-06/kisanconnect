@@ -10,6 +10,25 @@
   "scope": "/",
   "lang": "en",
   "categories": ["agriculture", "productivity", "utilities"],
+  "id": "com.kisanconnect.app",
+  "launch_handler": {
+    "client_mode": "navigate-existing"
+  },
+  "display_override": ["window-controls-overlay", "standalone"],
+  "protocol_handlers": [
+    {
+      "protocol": "web+kisanconnect",
+      "url": "/?handler=%s"
+    }
+  ],
+  "file_handlers": [
+    {
+      "action": "/",
+      "accept": {
+        "image/*": [".jpg", ".jpeg", ".png", ".webp"]
+      }
+    }
+  ],
   "icons": [
     {
       "src": "/icons/icon-72x72.png",

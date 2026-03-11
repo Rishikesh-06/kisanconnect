@@ -169,10 +169,13 @@
     "sessionExpired": "Session expired. Please login again."
   },
   "pwa": {
-    "installTitle": "Install Kisan Connect",
-    "installDescription": "Get quick access and work offline. Install our app for the best experience.",
-    "install": "Install",
+    "installTitle": "Download Kisan Connect",
+    "installTitleIOS": "Install Kisan Connect App",
+    "installDescription": "Download and install our app for offline access and better performance.",
+    "installDescriptionIOS": "Tap the Share button below, then select \"Add to Home Screen\" to install the app.",
+    "install": "Install App",
     "notNow": "Not now",
+    "gotIt": "Got it",
     "updateAvailable": "Update Available",
     "updateDescription": "A new version is available. Update now for the latest features.",
     "update": "Update",
