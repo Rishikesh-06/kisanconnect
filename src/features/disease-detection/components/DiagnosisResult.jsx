@@ -1,9 +1,14 @@
 import React from 'react';
-import { CheckCircle, AlertTriangle, XCircle, RefreshCw } from 'lucide-react';
+import { CheckCircle, AlertTriangle, XCircle, RefreshCw, Volume2, Square } from 'lucide-react';
 import { useLanguage } from '@/shared/contexts/LanguageContext';
+import { useTextToSpeech } from '@/shared/hooks/useTextToSpeech';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
+import { enhanceAnalysisWithLinks } from '@/shared/utils/textFormatting';
 
 const DiagnosisResult = ({ result, selectedImage, onReset }) => {
   const { currentLanguage } = useLanguage();
+  const { speak, stop, isSpeaking, isSupported } = useTextToSpeech(currentLanguage);
 
   const getSeverityConfig = (severity) => {
     switch (severity) {
@@ -74,10 +79,21 @@ const DiagnosisResult = ({ result, selectedImage, onReset }) => {
         <div className="kisan-card p-6 sm:p-8 border-l-8 border-l-[#768870] bg-white flex-1 overflow-y-auto scrollbar-hide shadow-lg rounded-[2rem]">
           <h3 className="font-bold text-lg mb-6 flex items-center gap-3 sticky top-0 bg-white pb-2 z-10">
             <CheckCircle className="w-5 h-5 text-[#768870]" />
-            {result.isHealthy ? 'Plant Health Report' : 'Treatment Protocol'}
+            <span className="flex-1">{result.isHealthy ? 'Plant Health Report' : 'Treatment Protocol'}</span>
+            {isSupported && (
+              <button
+                onClick={() => isSpeaking ? stop() : speak(result.fullAnalysis)}
+                className="p-2 ml-auto rounded-full hover:bg-[#f4f2eb] text-[#768870] transition-colors shadow-sm border border-[#eeede6]"
+                title={isSpeaking ? 'Stop speaking' : 'Read aloud'}
+              >
+                {isSpeaking ? <Square className="w-4 h-4 fill-current" /> : <Volume2 className="w-4 h-4" />}
+              </button>
+            )}
           </h3>
-          <div className="text-sm sm:text-base text-[#7a8478] font-medium leading-relaxed whitespace-pre-line">
-            {result.fullAnalysis}
+          <div className="text-sm sm:text-base text-[#2a3328] w-full prose prose-sm sm:prose-base prose-green max-w-none prose-headings:text-[#2a3328] prose-a:text-[#768870] prose-a:font-bold prose-strong:text-[#2a3328] prose-ul:my-2 prose-li:my-0.5">
+            <ReactMarkdown remarkPlugins={[remarkGfm]}>
+              {enhanceAnalysisWithLinks(result.fullAnalysis)}
+            </ReactMarkdown>
           </div>
         </div>
 

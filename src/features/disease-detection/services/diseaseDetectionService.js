@@ -268,84 +268,63 @@ async function fileToBase64WithoutPrefix(file) {
  * Build the vision prompt for cotton plant analysis
  */
 function buildVisionPrompt(language) {
-  const basePrompt = `You are an expert agricultural pathologist. Analyze this cotton plant and provide COMPLETE treatment details with exact medications and dosages.
+  const basePrompt = `You are an expert agricultural pathologist. Analyze this cotton plant and provide COMPLETE treatment details.
 
-FORMAT (No asterisks/dashes in content):
+Please format your response in elegant Markdown using structured headings (###), bold text (**), bullet points, and blockquotes. Do not use plain raw text block formatting.
 
-Disease Status: [Healthy/Diseased]
-Specific Disease: [Name]
-Confidence: [0-100]%
+FORMAT:
 
+### Disease Status: [Healthy/Diseased]
+**Specific Disease:** [Name]
+**Confidence:** [0-100]%
 
-🔍 Visual Assessment
+### 🔍 Visual Assessment
 Describe symptoms: spots, color, size, location, texture.
 
-
-🦠 Disease Details
+### 🦠 Disease Details
 Name disease, pathogen type, how it spreads.
 
+### 📊 Severity: [Mild/Moderate/Severe]
 
-📊 Severity: [Mild/Moderate/Severe]
+### 💊 TREATMENT (MUST COMPLETE ALL 3 OPTIONS)
+For each product mentioned, provide a markdown e-commerce link formatted exactly like this: [Product Name](https://www.amazon.in/s?k=[Product+Name]+agriculture+fungicide)
 
+#### OPTION 1: [Product Name with Link]
+* **Active Ingredient:** [Chemical]
+* **Dosage:** [X grams per liter OR X kg per acre]
+* **Mix:** [How to prepare]
+* **Apply:** [Spray method, timing]
+* **Frequency:** [Every X days, X times]
+* **Duration:** [X weeks]
 
-💊 TREATMENT (MUST COMPLETE ALL 3 OPTIONS)
+#### OPTION 2: [Product Name with Link]
+* **Active Ingredient:** [Chemical]
+* **Dosage:** [Exact amount]
+* **Mix:** [Preparation]
+* **Apply:** [Method]
+* **Frequency:** [Schedule]
 
-OPTION 1: [Product Name - e.g., Mancozeb 75% WP]
-Active Ingredient: [Chemical]
-Dosage: [X grams per liter OR X kg per acre]
-Mix: [How to prepare]
-Apply: [Spray method, timing]
-Frequency: [Every X days, X times]
-Duration: [X weeks]
-Water: [Liters per acre]
-Cost: [Rs. X-Y per acre]
+#### OPTION 3: [Product Name with Link]
+* **Active Ingredient:** [Chemical]
+* **Dosage:** [Exact amount]
+* **Mix:** [Preparation]
+* **Apply:** [Method]
 
-OPTION 2: [Product Name - e.g., Copper Oxychloride]
-Active Ingredient: [Chemical]
-Dosage: [Exact amount]
-Mix: [Preparation]
-Apply: [Method]
-Frequency: [Schedule]
-Duration: [Period]
-Cost: [Price]
+### 🌱 Organic Options
+* **[Natural remedy]:** [Ingredients with amounts, Preparation, Application]
 
-OPTION 3: [Product Name - e.g., Carbendazim]
-Active Ingredient: [Chemical]
-Dosage: [Exact amount]
-Mix: [Preparation]
-Apply: [Method]
-Frequency: [Schedule]
-Cost: [Price]
+### ⚡ Immediate Actions
+* [Action 1]
+* [Action 2]
 
-ORGANIC OPTIONS:
+### 🛡️ Prevention
+* [Practice 1]
+* [Practice 2]
 
-1. [Natural remedy]: [Ingredients with amounts], [Preparation], [Application]
-2. [Second remedy]: [Details]
+### ⚠️ Warnings
+> [Critical notes]
 
-IMMEDIATE ACTIONS:
-1. [Action]
-2. [Action]
-3. [Action]
-
-
-🛡️ Prevention
-1. [Practice]
-2. [Practice]
-3. [Practice]
-4. [Practice]
-
-
-📈 Recovery
-Time: [X weeks]
-Yield Impact: [Percentage]
-Success Rate: [Percentage]
-
-
-⚠️ Warnings
-[Critical notes]
-
-
-CRITICAL: Complete ALL treatment options with REAL Indian product names and EXACT dosages. Do not stop until all sections are complete.`;
+CRITICAL: Complete ALL treatment options with REAL Indian product names and EXACT dosages. Do not stop until all sections are complete. Always provide the Amazon search links exactly as shown.`;
 
   if (language === 'hi') {
     return basePrompt + '\n\nहिंदी में पूरा जवाब दें। सभी दवाओं के नाम और मात्रा बताएं।';
@@ -365,7 +344,7 @@ function parseVisionResponse(text) {
   const isHealthy = status.includes('healthy');
 
   const diseaseMatch = text.match(/Specific Disease:\s*([^\n]+)/i);
-  let disease = diseaseMatch ? diseaseMatch[1].trim() : '';
+  let disease = diseaseMatch ? diseaseMatch[1].replace(/\*\*/g, '').trim() : '';
   
   if (disease.toLowerCase().includes('none') || disease.toLowerCase().includes('healthy')) {
     disease = 'Healthy Cotton Plant';

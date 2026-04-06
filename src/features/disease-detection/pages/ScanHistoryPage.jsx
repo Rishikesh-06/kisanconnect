@@ -13,12 +13,18 @@ import {
   Search,
   Sprout,
   Settings,
-  Bell
+  Bell,
+  Volume2,
+  Square
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/features/auth/contexts/AuthContext';
 import { useLanguage } from '@/shared/contexts/LanguageContext';
 import { LanguageSelector } from '@/shared/ui/LanguageSelector';
+import { useTextToSpeech } from '@/shared/hooks/useTextToSpeech';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
+import { enhanceAnalysisWithLinks } from '@/shared/utils/textFormatting';
 import { 
   getUserDiseaseDetectionsFromFirestore, 
   deleteDiseaseDetectionFromFirestore 
@@ -31,6 +37,7 @@ const ScanHistoryPage = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
   const { currentLanguage } = useLanguage();
+  const { speak, stop, isSpeaking, isSupported } = useTextToSpeech(currentLanguage);
   
   const [scans, setScans] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -248,7 +255,7 @@ const ScanHistoryPage = () => {
                       <div className="flex items-center gap-2">
                         {getStatusIcon(scan.isHealthy)}
                         <h3 className="font-bold text-sm text-[#2a3328] truncate">
-                          {scan.disease}
+                          {scan.disease?.replace(/\*\*/g, '').trim()}
                         </h3>
                       </div>
                       <span className="text-xs text-[#7a8478] bg-white px-2 py-1 rounded">
@@ -329,7 +336,7 @@ const ScanHistoryPage = () => {
                 <div className="flex items-center gap-3">
                   {getStatusIcon(selectedScan.isHealthy)}
                   <div>
-                    <h3 className="font-bold text-lg text-[#2a3328]">{selectedScan.disease}</h3>
+                    <h3 className="font-bold text-lg text-[#2a3328]">{selectedScan.disease?.replace(/\*\*/g, '').trim()}</h3>
                     <p className="text-sm text-[#7a8478]">
                       Confidence: {Math.round(selectedScan.confidence * 100)}%
                     </p>
@@ -360,9 +367,22 @@ const ScanHistoryPage = () => {
                 {/* Full Analysis */}
                 {selectedScan.fullAnalysis && (
                   <div>
-                    <h4 className="font-bold text-[#2a3328] mb-2">Full Analysis:</h4>
-                    <div className="bg-[#f4f2eb] p-4 rounded-lg text-sm text-[#2a3328] whitespace-pre-wrap max-h-64 overflow-y-auto">
-                      {selectedScan.fullAnalysis}
+                    <div className="flex items-center justify-between mb-2">
+                      <h4 className="font-bold text-[#2a3328]">Full Analysis:</h4>
+                      {isSupported && (
+                        <button
+                          onClick={() => isSpeaking ? stop() : speak(selectedScan.fullAnalysis)}
+                          className="p-1.5 rounded-full hover:bg-[#f4f2eb] text-[#768870] transition-colors border border-transparent hover:border-[#eeede6]"
+                          title={isSpeaking ? 'Stop speaking' : 'Read aloud'}
+                        >
+                          {isSpeaking ? <Square className="w-4 h-4 fill-current" /> : <Volume2 className="w-4 h-4" />}
+                        </button>
+                      )}
+                    </div>
+                    <div className="bg-[#f4f2eb] p-4 rounded-lg text-sm text-[#2a3328] overflow-y-auto max-h-[50vh] prose prose-sm prose-green max-w-none prose-headings:text-[#2a3328] prose-a:text-[#768870] prose-a:font-bold prose-strong:text-[#2a3328] prose-p:my-1 prose-ul:my-1 prose-li:my-0.5">
+                      <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                        {enhanceAnalysisWithLinks(selectedScan.fullAnalysis)}
+                      </ReactMarkdown>
                     </div>
                   </div>
                 )}
